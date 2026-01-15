@@ -150,16 +150,8 @@ function draw() {
     // Draw the "App" container
     noStroke();
 
-    // Shadow for main container
-    drawingContext.shadowOffsetX = 0;
-    drawingContext.shadowOffsetY = 20;
-    drawingContext.shadowBlur = 40;
-    drawingContext.shadowColor = 'rgba(0,0,0,0.1)';
-
     fill(255);
     rect(offsetX, offsetY, CANVAS_W, CANVAS_H, 12); // Rounded corners for container
-
-    drawingContext.shadowBlur = 0; // Reset shadow
 
     push();
     translate(offsetX, offsetY);
@@ -289,7 +281,7 @@ function renderProcesses() {
 
 function drawGanttChart() {
     const startX = 50;
-    const maxWidth = width - 100;
+    const maxWidth = CANVAS_W - 100;
     const blockW = min(25, maxWidth / (systemTime + 1));
 
     fill(52, 73, 94);
