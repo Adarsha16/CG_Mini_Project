@@ -9,8 +9,12 @@ let timer = 0;
 let isSimulationComplete = false;
 
 // UI Elements
+// UI Elements
 let quantumSlider, speedSlider, btn, pauseBtn;
+let titleElement, qLabel, sLabel;
 let isPaused = false;
+let offsetX = 0;
+let offsetY = 0;
 
 // Layout Constants
 const CANVAS_W = 900;
@@ -19,31 +23,25 @@ const CPU_POS = { x: 450, y: 320 };
 const GANTT_Y = 510;
 
 function setup() {
-    createCanvas(CANVAS_W, CANVAS_H);
+    createCanvas(windowWidth, windowHeight);
 
-    let topMargin = 20;
+    // Initialize UI elements once
+    titleElement = createP('<b>CPU Scheduling Parameters</b>');
+    titleElement.style('font-family', 'Inter, sans-serif');
+    titleElement.style('margin', '0');
+    titleElement.style('color', '#2d3436');
 
-    let title = createP('<b>CPU Scheduling Parameters</b>');
-    title.position(20, topMargin);
-    title.style('font-family', 'sans-serif');
-    title.style('margin', '0');
-
-    let qLabel = createSpan('Time Quantum: ');
-    qLabel.position(20, topMargin + 35);
-    qLabel.style('font-family', 'sans-serif');
+    qLabel = createSpan('Time Quantum: ');
+    qLabel.style('font-family', 'Inter, sans-serif');
 
     quantumSlider = createSlider(1, 6, 2, 1);
-    quantumSlider.position(130, topMargin + 35);
 
-    let sLabel = createSpan('Logic Speed: ');
-    sLabel.position(320, topMargin + 35);
-    sLabel.style('font-family', 'sans-serif');
+    sLabel = createSpan('Logic Speed: ');
+    sLabel.style('font-family', 'Inter, sans-serif');
 
     speedSlider = createSlider(1, 60, 30, 5);
-    speedSlider.position(415, topMargin + 35);
 
     btn = createButton('Restart');
-    btn.position(800, topMargin + 30);
     btn.mousePressed(resetSimulation);
     btn.style('padding', '8px 16px');
     btn.style('cursor', 'pointer');
@@ -55,7 +53,6 @@ function setup() {
     btn.style('font-weight', '600');
 
     pauseBtn = createButton('Pause');
-    pauseBtn.position(700, topMargin + 30);
     pauseBtn.mousePressed(togglePause);
     pauseBtn.style('padding', '8px 16px');
     pauseBtn.style('cursor', 'pointer');
@@ -66,7 +63,38 @@ function setup() {
     pauseBtn.style('font-family', 'Inter, sans-serif');
     pauseBtn.style('font-weight', '600');
 
+    // Calculate positions
+    repositionUI();
+
     resetSimulation();
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    repositionUI();
+}
+
+function repositionUI() {
+    // Center the 900x600 content
+    offsetX = (width - CANVAS_W) / 2;
+    offsetY = (height - CANVAS_H) / 2;
+
+    // Ensure we don't go off-screen top/left
+    offsetX = max(0, offsetX);
+    offsetY = max(0, offsetY);
+
+    let topMargin = offsetY + 20;
+
+    titleElement.position(offsetX + 20, topMargin);
+
+    qLabel.position(offsetX + 20, topMargin + 35);
+    quantumSlider.position(offsetX + 130, topMargin + 35);
+
+    sLabel.position(offsetX + 320, topMargin + 35);
+    speedSlider.position(offsetX + 415, topMargin + 35);
+
+    pauseBtn.position(offsetX + 700, topMargin + 30);
+    btn.position(offsetX + 800, topMargin + 30);
 }
 
 
@@ -116,13 +144,32 @@ function resetSimulation() {
 }
 
 function draw() {
-    background(252, 253, 255);
+
+    background('#dfe6e9'); // Page background
+
+    // Draw the "App" container
+    noStroke();
+
+    // Shadow for main container
+    drawingContext.shadowOffsetX = 0;
+    drawingContext.shadowOffsetY = 20;
+    drawingContext.shadowBlur = 40;
+    drawingContext.shadowColor = 'rgba(0,0,0,0.1)';
+
+    fill(255);
+    rect(offsetX, offsetY, CANVAS_W, CANVAS_H, 12); // Rounded corners for container
+
+    drawingContext.shadowBlur = 0; // Reset shadow
+
+    push();
+    translate(offsetX, offsetY);
 
     drawStaticLabels();
     updateLogic();
     renderProcesses();
     drawGanttChart();
     drawStatusOverlay();
+    pop();
 }
 
 function drawStaticLabels() {
