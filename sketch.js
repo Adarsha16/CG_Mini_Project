@@ -9,7 +9,8 @@ let timer = 0;
 let isSimulationComplete = false;
 
 // UI Elements
-let quantumSlider, speedSlider, btn;
+let quantumSlider, speedSlider, btn, pauseBtn;
+let isPaused = false;
 
 // Layout Constants
 const CANVAS_W = 900;
@@ -41,20 +42,51 @@ function setup() {
     speedSlider = createSlider(1, 60, 30, 5);
     speedSlider.position(415, topMargin + 35);
 
-    btn = createButton('Restart Simulation');
-    btn.position(720, topMargin + 30);
+    btn = createButton('Restart');
+    btn.position(800, topMargin + 30);
     btn.mousePressed(resetSimulation);
     btn.style('padding', '8px 16px');
     btn.style('cursor', 'pointer');
-    btn.style('background', '#2c3e50');
+    btn.style('background', '#e74c3c');
     btn.style('color', 'white');
     btn.style('border', 'none');
     btn.style('border-radius', '4px');
+    btn.style('font-family', 'Inter, sans-serif');
+    btn.style('font-weight', '600');
+
+    pauseBtn = createButton('Pause');
+    pauseBtn.position(700, topMargin + 30);
+    pauseBtn.mousePressed(togglePause);
+    pauseBtn.style('padding', '8px 16px');
+    pauseBtn.style('cursor', 'pointer');
+    pauseBtn.style('background', '#3498db');
+    pauseBtn.style('color', 'white');
+    pauseBtn.style('border', 'none');
+    pauseBtn.style('border-radius', '4px');
+    pauseBtn.style('font-family', 'Inter, sans-serif');
+    pauseBtn.style('font-weight', '600');
 
     resetSimulation();
 }
 
+
+function togglePause() {
+    isPaused = !isPaused;
+    if (isPaused) {
+        pauseBtn.html('Resume');
+        pauseBtn.style('background', '#27ae60');
+    } else {
+        pauseBtn.html('Pause');
+        pauseBtn.style('background', '#3498db');
+    }
+}
+
 function resetSimulation() {
+    isPaused = false;
+    if (pauseBtn) {
+        pauseBtn.html('Pause');
+        pauseBtn.style('background', '#3498db');
+    }
     processes = [];
     readyQueue = [];
     finishedProcesses = [];
@@ -137,7 +169,7 @@ function updateLogic() {
     }
 
     // Update logic at frequency controlled by speedSlider
-    if (frameCount % speedSlider.value() === 0) {
+    if (!isPaused && frameCount % speedSlider.value() === 0) {
 
         // Check if CPU is vacant
         if (cpuProcess === null && readyQueue.length > 0) {
@@ -178,8 +210,8 @@ function renderProcesses() {
     }
 
     for (let i = 0; i < finishedProcesses.length; i++) {
-        finishedProcesses[i].targetX = 700 + (i * 15);
-        finishedProcesses[i].targetY = 160 - (i * 5);
+        finishedProcesses[i].targetX = 800 + (i * 5);
+        finishedProcesses[i].targetY = 320;
     }
 
     // Render using LERP
@@ -190,16 +222,9 @@ function renderProcesses() {
         push();
         translate(p.x, p.y);
 
-        // Card style shadow
         noStroke();
-        fill(0, 30);
-        rect(3, 3, 50, 50, 8);
-
-        // Block
         fill(p.color);
-        stroke(255);
-        strokeWeight(2);
-        rect(0, 0, 50, 50, 8);
+        rect(0, 0, 50, 50, 12);
 
         // Label
         fill(255);
@@ -257,9 +282,9 @@ function drawGanttChart() {
 
 function drawStatusOverlay() {
     // Status Dashboard
-    fill(245, 247, 250);
+    fill(255);
     noStroke();
-    rect(width - 240, 100, 220, 75, 8);
+    rect(width - 240, 100, 220, 90, 15);
 
     fill(44, 62, 80);
     textAlign(LEFT);
@@ -269,16 +294,20 @@ function drawStatusOverlay() {
 
     textStyle(NORMAL);
     textSize(13);
-    text(`Elapsed Time: ${systemTime}`, width - 225, 145);
+    text(`Elapsed Time: ${systemTime}`, width - 225, 150);
 
     if (isSimulationComplete) {
         fill('#27ae60');
         textStyle(BOLD);
-        text("STATUS: ALL FINISHED", width - 225, 165);
+        text("STATUS: ALL FINISHED", width - 225, 175);
+    } else if (isPaused) {
+        fill('#f39c12');
+        textStyle(BOLD);
+        text("STATUS: PAUSED", width - 225, 175);
     } else {
         fill('#2980b9');
         textStyle(BOLD);
-        text("STATUS: EXECUTING...", width - 225, 165);
+        text("STATUS: EXECUTING...", width - 225, 175);
     }
 }
 
