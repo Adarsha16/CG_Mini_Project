@@ -249,8 +249,6 @@ function renderProcesses() {
     }
 
     for (let i = 0; i < finishedProcesses.length; i++) {
-        // Queue grows from right (Terminated Pool) towards the left (CPU)
-        // 790 puts the right edge of the first block at 840 (aligned with label)
         finishedProcesses[i].targetX = 790 - (i * 60);
         finishedProcesses[i].targetY = 320;
     }
