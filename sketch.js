@@ -1,3 +1,9 @@
+/* 
+   Professional Round Robin CPU Scheduling Visualizer
+   - Clean UI (Flat Design)
+   - Numeric Time Quantum Control
+   - Smooth Animations
+*/
 
 let processes = [];
 let readyQueue = [];
@@ -8,64 +14,63 @@ let systemTime = 0;
 let timer = 0;
 let isSimulationComplete = false;
 
+// Scheduling Parameters
+let timeQuantum = 2; // Default value
+
 // UI Elements
-// UI Elements
-let quantumSlider, speedSlider, btn, pauseBtn;
-let titleElement, qLabel, sLabel;
+let btnQMinus, btnQPlus, speedSlider;
+let btnRestart, btnPause;
 let isPaused = false;
+
+// Layout Variables
 let offsetX = 0;
 let offsetY = 0;
 
-// Layout Constants
+// Constants
 const CANVAS_W = 900;
-const CANVAS_H = 600;
-const CPU_POS = { x: 450, y: 320 };
-const GANTT_Y = 510;
+const CANVAS_H = 650;
+const COLOR_BG = '#F0F2F5';
+const COLOR_CARD = '#FFFFFF';
+const COLOR_ACCENT = '#3B82F6'; // Blue
+const COLOR_TEXT_MAIN = '#1E293B';
+const COLOR_TEXT_SUB = '#64748B';
+
+// Process Palette (Modern/Professional)
+const PALETTE = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
+    textFont('Inter, sans-serif');
 
-    // Initialize UI elements once
-    titleElement = createP('<b>CPU Scheduling Parameters</b>');
-    titleElement.style('font-family', 'Inter, sans-serif');
-    titleElement.style('margin', '0');
-    titleElement.style('color', '#2d3436');
+    // --- Create UI Controls ---
 
-    qLabel = createSpan('Time Quantum: ');
-    qLabel.style('font-family', 'Inter, sans-serif');
+    // Quantum Controls
+    btnQMinus = createButton('-');
+    styleButton(btnQMinus, false);
+    btnQMinus.mousePressed(() => adjustQuantum(-1));
 
-    quantumSlider = createSlider(1, 6, 2, 1);
+    btnQPlus = createButton('+');
+    styleButton(btnQPlus, false);
+    btnQPlus.mousePressed(() => adjustQuantum(1));
 
-    sLabel = createSpan('Logic Speed: ');
-    sLabel.style('font-family', 'Inter, sans-serif');
-
+    // Simulation Speed
     speedSlider = createSlider(1, 60, 30, 5);
+    speedSlider.style('width', '100px');
+    speedSlider.style('cursor', 'pointer');
 
-    btn = createButton('Restart');
-    btn.mousePressed(resetSimulation);
-    btn.style('padding', '8px 16px');
-    btn.style('cursor', 'pointer');
-    btn.style('background', '#e74c3c');
-    btn.style('color', 'white');
-    btn.style('border', 'none');
-    btn.style('border-radius', '4px');
-    btn.style('font-family', 'Inter, sans-serif');
-    btn.style('font-weight', '600');
+    // Playback Controls
+    btnPause = createButton('Pause');
+    styleButton(btnPause, true);
+    btnPause.mousePressed(togglePause);
 
-    pauseBtn = createButton('Pause');
-    pauseBtn.mousePressed(togglePause);
-    pauseBtn.style('padding', '8px 16px');
-    pauseBtn.style('cursor', 'pointer');
-    pauseBtn.style('background', '#3498db');
-    pauseBtn.style('color', 'white');
-    pauseBtn.style('border', 'none');
-    pauseBtn.style('border-radius', '4px');
-    pauseBtn.style('font-family', 'Inter, sans-serif');
-    pauseBtn.style('font-weight', '600');
+    btnRestart = createButton('Restart');
+    styleButton(btnRestart, false);
+    btnRestart.style('background-color', '#EF4444'); // Red for restart
+    btnRestart.style('color', '#FFF');
+    btnRestart.mousePressed(resetSimulation);
 
-    // Calculate positions
+    // Initial positioning
     repositionUI();
-
     resetSimulation();
 }
 
@@ -74,47 +79,71 @@ function windowResized() {
     repositionUI();
 }
 
+// Helper to style buttons via CSS
+function styleButton(btn, isPrimary) {
+    btn.style('border', 'none');
+    btn.style('border-radius', '6px');
+    btn.style('padding', '6px 12px');
+    btn.style('font-family', 'Inter, sans-serif');
+    btn.style('font-weight', '600');
+    btn.style('cursor', 'pointer');
+    btn.style('transition', 'all 0.2s');
+
+    if (isPrimary) {
+        btn.style('background-color', COLOR_ACCENT);
+        btn.style('color', '#FFFFFF');
+    } else {
+        btn.style('background-color', '#E2E8F0');
+        btn.style('color', COLOR_TEXT_MAIN);
+    }
+}
+
 function repositionUI() {
-    // Center the 900x600 content
+    // Center the container
     offsetX = (width - CANVAS_W) / 2;
     offsetY = (height - CANVAS_H) / 2;
 
-    // Ensure we don't go off-screen top/left
-    offsetX = max(0, offsetX);
-    offsetY = max(0, offsetY);
+    offsetX = max(20, offsetX);
+    offsetY = max(20, offsetY);
 
-    let topMargin = offsetY + 20;
+    // Control Header Position (Top Right of the card)
+    let headerY = offsetY + 30;
+    let startX = offsetX + 420;
 
-    titleElement.position(offsetX + 20, topMargin);
+    // Time Quantum Buttons
+    btnQMinus.position(startX, headerY);
+    btnQPlus.position(startX + 80, headerY); // Gap for the number text
 
-    qLabel.position(offsetX + 20, topMargin + 35);
-    quantumSlider.position(offsetX + 130, topMargin + 35);
+    // Speed Slider
+    speedSlider.position(startX + 150, headerY + 5);
 
-    sLabel.position(offsetX + 320, topMargin + 35);
-    speedSlider.position(offsetX + 415, topMargin + 35);
-
-    pauseBtn.position(offsetX + 700, topMargin + 30);
-    btn.position(offsetX + 800, topMargin + 30);
+    // Action Buttons
+    btnPause.position(offsetX + CANVAS_W - 160, headerY);
+    btnRestart.position(offsetX + CANVAS_W - 85, headerY);
 }
 
+function adjustQuantum(val) {
+    timeQuantum += val;
+    if (timeQuantum < 1) timeQuantum = 1;
+    if (timeQuantum > 10) timeQuantum = 10;
+}
 
 function togglePause() {
     isPaused = !isPaused;
     if (isPaused) {
-        pauseBtn.html('Resume');
-        pauseBtn.style('background', '#27ae60');
+        btnPause.html('Resume');
+        btnPause.style('background-color', '#10B981'); // Green
     } else {
-        pauseBtn.html('Pause');
-        pauseBtn.style('background', '#3498db');
+        btnPause.html('Pause');
+        btnPause.style('background-color', COLOR_ACCENT); // Blue
     }
 }
 
 function resetSimulation() {
     isPaused = false;
-    if (pauseBtn) {
-        pauseBtn.html('Pause');
-        pauseBtn.style('background', '#3498db');
-    }
+    btnPause.html('Pause');
+    btnPause.style('background-color', COLOR_ACCENT);
+
     processes = [];
     readyQueue = [];
     finishedProcesses = [];
@@ -123,19 +152,18 @@ function resetSimulation() {
     timer = 0;
     isSimulationComplete = false;
 
-    const palette = ['#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F', '#EDC948'];
-
-    for (let i = 0; i < 6; i++) {
+    // Create Processes
+    for (let i = 0; i < 5; i++) {
         let p = {
             id: "P" + (i + 1),
-            burst: floor(random(5, 12)),
+            burst: floor(random(4, 10)),
             remaining: 0,
-            color: palette[i],
-            x: 50,
-            y: -50,
-            targetX: 50,
-            targetY: 50,
-            history: []
+            color: PALETTE[i % PALETTE.length],
+            x: offsetX - 50,
+            y: offsetY + 200,
+            targetX: 0,
+            targetY: 0,
+            history: [] // Stores time units where this process was active
         };
         p.remaining = p.burst;
         processes.push(p);
@@ -144,73 +172,111 @@ function resetSimulation() {
 }
 
 function draw() {
+    background(COLOR_BG);
 
-    background('#dfe6e9'); // Page background
-
-    // Draw the "App" container
-    noStroke();
-
-    fill(255);
-    rect(offsetX, offsetY, CANVAS_W, CANVAS_H, 12); // Rounded corners for container
-
+    // 1. Draw Main Card Container
     push();
     translate(offsetX, offsetY);
 
-    drawStaticLabels();
+    // Main Card Background
+    fill(COLOR_CARD);
+    stroke('#E2E8F0'); // Subtle border instead of shadow
+    strokeWeight(1);
+    rect(0, 0, CANVAS_W, CANVAS_H, 20);
+
+    // 2. Draw Header Area
+    drawHeader();
+
+    // 3. Draw Layout Zones
+    drawZones();
+
+    // 4. Update Logic
     updateLogic();
+
+    // 5. Render Processes & Gantt
     renderProcesses();
     drawGanttChart();
-    drawStatusOverlay();
+
     pop();
 }
 
-function drawStaticLabels() {
+function drawHeader() {
     // Title
-    noStroke();
-    fill(44, 62, 80);
-    textAlign(LEFT);
-    textSize(24);
+    fill(COLOR_TEXT_MAIN);
+    textSize(22);
     textStyle(BOLD);
-    text("CPU Scheduling: Round Robin Visualizer", 20, 110);
-
-    // Background Guide Line (Conveyor belt)
-    stroke(235);
-    strokeWeight(3);
-    line(50, CPU_POS.y, 850, CPU_POS.y);
-
-    // CPU Socket Design
     noStroke();
-    fill(0, 15);
-    rect(CPU_POS.x - 45, CPU_POS.y - 45, 90, 90, 15); // Shadow
-    fill(255);
-    stroke(200);
-    strokeWeight(2);
-    rect(CPU_POS.x - 40, CPU_POS.y - 40, 80, 80, 10);
+    textAlign(LEFT, TOP);
+    text("Round Robin Visualizer", 40, 35);
 
-    fill(127, 140, 141);
+    // Quantum Value Display
+    // Note: Buttons are positioned in DOM, we just draw the text between them
+    fill(COLOR_TEXT_MAIN);
+    textSize(16);
+    textAlign(CENTER, TOP);
+    textStyle(BOLD);
+    text(timeQuantum, 420 + 55, 37); // Positioned between - and +
+
+    // Labels
+    fill(COLOR_TEXT_SUB);
+    textSize(12);
+    textStyle(NORMAL);
+    textAlign(CENTER, TOP);
+    text("Time Quantum", 420 + 55, 15);
+
+    textAlign(LEFT, TOP);
+    text("Sim Speed", 570, 15);
+}
+
+function drawZones() {
+    let yPos = 120;
+    let zoneH = 180;
+
+    // Queue Zone
+    drawZoneRect(40, yPos, 300, zoneH, "Ready Queue");
+
+    // CPU Zone (Center)
+    drawZoneRect(360, yPos, 180, zoneH, "CPU Core");
+
+    // Finished Zone
+    drawZoneRect(560, yPos, 300, zoneH, "Terminated");
+
+    // Connector Lines (Belt)
+    stroke('#E2E8F0');
+    strokeWeight(4);
+    line(340, yPos + zoneH / 2, 360, yPos + zoneH / 2);
+    line(540, yPos + zoneH / 2, 560, yPos + zoneH / 2);
+
+    // CPU Socket Graphic
     noStroke();
-    textAlign(CENTER);
+    fill('#F1F5F9');
+    circle(450, yPos + zoneH / 2, 120);
+    fill('#E2E8F0');
+    circle(450, yPos + zoneH / 2, 90);
+}
+
+function drawZoneRect(x, y, w, h, label) {
+    fill('#F8FAFC'); // Very light grey
+    stroke('#E2E8F0');
+    strokeWeight(1);
+    rect(x, y, w, h, 12);
+
+    noStroke();
+    fill(COLOR_TEXT_SUB);
     textSize(12);
     textStyle(BOLD);
-    text("CPU CORE", CPU_POS.x, CPU_POS.y + 60);
-
-    textAlign(LEFT);
-    text("READY QUEUE", 60, CPU_POS.y + 60);
-    textAlign(RIGHT);
-    text("TERMINATED POOL", 840, CPU_POS.y + 60);
+    textAlign(LEFT, TOP);
+    text(label.toUpperCase(), x + 15, y + 15);
 }
 
 function updateLogic() {
-    // Halt if all processes are finished
     if (finishedProcesses.length === processes.length) {
         isSimulationComplete = true;
         return;
     }
 
-    // Update logic at frequency controlled by speedSlider
     if (!isPaused && frameCount % speedSlider.value() === 0) {
-
-        // Check if CPU is vacant
+        // Load CPU if empty
         if (cpuProcess === null && readyQueue.length > 0) {
             cpuProcess = readyQueue.shift();
             timer = 0;
@@ -222,134 +288,154 @@ function updateLogic() {
             systemTime++;
             cpuProcess.history.push(systemTime);
 
+            // Check if finished
             if (cpuProcess.remaining <= 0) {
                 finishedProcesses.push(cpuProcess);
                 cpuProcess = null;
             }
-            else if (timer >= quantumSlider.value()) {
+            // Check Quantum
+            else if (timer >= timeQuantum) {
                 readyQueue.push(cpuProcess);
                 cpuProcess = null;
             }
         } else {
+            // Idle time
             systemTime++;
         }
     }
 }
 
 function renderProcesses() {
-    // Position targets for animation
+    let zoneY = 120;
+    let zoneCenterY = zoneY + 90;
+
+    // 1. Calculate Targets
+
+    // Ready Queue Positions
     for (let i = 0; i < readyQueue.length; i++) {
-        readyQueue[i].targetX = CPU_POS.x - 110 - (i * 70);
-        readyQueue[i].targetY = CPU_POS.y - 25;
+        readyQueue[i].targetX = 60 + (i * 60);
+        readyQueue[i].targetY = zoneCenterY - 25;
     }
 
+    // CPU Position
     if (cpuProcess) {
-        cpuProcess.targetX = CPU_POS.x - 25;
-        cpuProcess.targetY = CPU_POS.y - 25;
+        cpuProcess.targetX = 450 - 25;
+        cpuProcess.targetY = zoneCenterY - 25;
     }
 
+    // Finished Positions
     for (let i = 0; i < finishedProcesses.length; i++) {
-        finishedProcesses[i].targetX = 790 - (i * 60);
-        finishedProcesses[i].targetY = 320;
+        finishedProcesses[i].targetX = 580 + (i * 55);
+        finishedProcesses[i].targetY = zoneCenterY - 25;
     }
 
-    // Render using LERP
+    // 2. Draw Processes
     for (let p of processes) {
-        p.x = lerp(p.x, p.targetX, 0.15);
-        p.y = lerp(p.y, p.targetY, 0.15);
+        // Smooth movement (Lerp)
+        p.x = lerp(p.x, p.targetX, 0.1);
+        p.y = lerp(p.y, p.targetY, 0.1);
 
-        push();
-        translate(p.x, p.y);
+        drawProcessBlock(p);
+    }
 
-        noStroke();
-        fill(p.color);
-        rect(0, 0, 50, 50, 12);
-
-        // Label
-        fill(255);
-        noStroke();
-        textAlign(CENTER, CENTER);
-        textStyle(BOLD);
-        textSize(16);
-        text(p.id, 25, 18);
-        textStyle(NORMAL);
-        textSize(10);
-        text("REM: " + p.remaining, 25, 36);
-        pop();
+    // Draw Timer radial indicator around CPU if active
+    if (cpuProcess) {
+        noFill();
+        stroke(cpuProcess.color);
+        strokeWeight(4);
+        let angle = map(timer, 0, timeQuantum, -HALF_PI, TWO_PI - HALF_PI);
+        arc(450, zoneCenterY, 70, 70, -HALF_PI, angle);
     }
 }
 
-function drawGanttChart() {
-    const startX = 50;
-    const maxWidth = CANVAS_W - 100;
-    const blockW = min(25, maxWidth / (systemTime + 1));
+function drawProcessBlock(p) {
+    push();
+    translate(p.x, p.y);
 
-    fill(52, 73, 94);
+    // Block body
+    fill(p.color);
     noStroke();
-    textAlign(LEFT);
-    textStyle(BOLD);
-    textSize(13);
-    text("GANTT CHART: PROCESS EXECUTION TIMELINE", startX, GANTT_Y - 15);
+    rect(0, 0, 50, 50, 8);
 
+    // Text
+    fill('#FFFFFF');
+    textAlign(CENTER, CENTER);
+    textStyle(BOLD);
+    textSize(14);
+    text(p.id, 25, 18);
+
+    textSize(10);
+    textStyle(NORMAL);
+    fill('rgba(255,255,255,0.9)');
+    text(p.remaining + "s", 25, 36);
+
+    pop();
+}
+
+function drawGanttChart() {
+    let startY = 360;
+    let chartH = 250;
+
+    // Section Header
+    fill(COLOR_TEXT_MAIN);
+    textSize(16);
+    textStyle(BOLD);
+    textAlign(LEFT, TOP);
+    text("Gantt Chart Timeline", 40, 320);
+
+    // Stats
+    textAlign(RIGHT, TOP);
+    fill(COLOR_TEXT_SUB);
+    textStyle(NORMAL);
+    textSize(14);
+    let statusText = isSimulationComplete ? "Finished" : (isPaused ? "Paused" : "Running");
+    text(`Status: ${statusText}  |  Total Time: ${systemTime}`, CANVAS_W - 40, 320);
+
+    // Chart Background
+    fill('#F8FAFC');
+    stroke('#E2E8F0');
+    strokeWeight(1);
+    rect(40, startY, CANVAS_W - 80, 80, 8);
+
+    // Dynamic block width based on time
+    let maxDisplayTime = max(20, systemTime + 5);
+    let blockW = (CANVAS_W - 80) / maxDisplayTime;
+    let chartX = 40;
+    let chartY = startY + 20;
+
+    // Draw Timeline Blocks
     for (let t = 1; t <= systemTime; t++) {
         for (let p of processes) {
             if (p.history.includes(t)) {
                 fill(p.color);
                 noStroke();
-                rect(startX + (t - 1) * blockW, GANTT_Y, blockW, 35);
-
-                stroke(255, 40);
-                line(startX + t * blockW, GANTT_Y, startX + t * blockW, GANTT_Y + 35);
+                // Draw rect with slight gap
+                rect(chartX + (t - 1) * blockW, chartY, blockW - 0.5, 40, 2);
             }
         }
     }
 
-    stroke(149, 165, 166);
-    strokeWeight(2);
-    line(startX, GANTT_Y + 35, startX + (systemTime * blockW), GANTT_Y + 35);
-
-    fill(127, 140, 141);
+    // Time Markers
+    fill(COLOR_TEXT_SUB);
     noStroke();
-    textStyle(NORMAL);
-    textSize(11);
-    text("Time: 0", startX, GANTT_Y + 52);
-    if (systemTime > 0) {
-        textAlign(RIGHT);
-        text("Time: " + systemTime, startX + (systemTime * blockW), GANTT_Y + 52);
+    textSize(10);
+    textAlign(CENTER);
+
+    // Draw 0
+    text("0", chartX, chartY + 55);
+
+    // Draw current time
+    text(systemTime, chartX + (systemTime * blockW), chartY + 55);
+
+    // Draw Legend below chart
+    let lx = 40;
+    let ly = startY + 100;
+    for (let p of processes) {
+        fill(p.color);
+        circle(lx, ly, 10);
+        fill(COLOR_TEXT_MAIN);
+        textAlign(LEFT, CENTER);
+        text(p.id, lx + 10, ly);
+        lx += 50;
     }
-}
-
-function drawStatusOverlay() {
-    // Status Dashboard
-    fill(255);
-    noStroke();
-    rect(width - 240, 100, 220, 90, 15);
-
-    fill(44, 62, 80);
-    textAlign(LEFT);
-    textSize(14);
-    textStyle(BOLD);
-    text("Simulation Stats", width - 225, 125);
-
-    textStyle(NORMAL);
-    textSize(13);
-    text(`Elapsed Time: ${systemTime}`, width - 225, 150);
-
-    if (isSimulationComplete) {
-        fill('#27ae60');
-        textStyle(BOLD);
-        text("STATUS: ALL FINISHED", width - 225, 175);
-    } else if (isPaused) {
-        fill('#f39c12');
-        textStyle(BOLD);
-        text("STATUS: PAUSED", width - 225, 175);
-    } else {
-        fill('#2980b9');
-        textStyle(BOLD);
-        text("STATUS: EXECUTING...", width - 225, 175);
-    }
-}
-
-function keyPressed() {
-    if (key === 'r' || key === 'R') resetSimulation();
 }
